@@ -1,1 +1,124 @@
+pipeline {
 
+    agent any
+
+    environment {
+        IMAGE_NAME = "anjali1410/myapp"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Clone Repository') {
+            steps {
+                echo "===== Stage 1 : Clone Repository ====="
+
+                git branch: 'main',
+                    url: 'https://github.com/anjalithakur9414/containerized-webapp-cicd.git'
+            }
+        }
+
+        stage('Check Kubernetes') {
+            steps {
+                echo "===== Stage 2 : Check Kubernetes ====="
+
+                sh '''
+                    kubectl config current-context
+                    kubectl get nodes
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "===== Stage 3 : Build Docker Image ====="
+
+                sh '''
+                    docker build \
+                    -t $IMAGE_NAME:$IMAGE_TAG \
+                    -f docker/Dockerfile .
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo "===== Stage 4 : Push Docker Image ====="
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+                        docker push $IMAGE_NAME:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+
+                echo "===== Stage 5 : Deploy to Kubernetes ====="
+
+                sh """
+                    sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g' kubernetes/deployment.yaml
+
+                    kubectl apply -f kubernetes/deployment.yaml
+
+                    kubectl apply -f kubernetes/service.yaml
+                """
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+
+                echo "===== Stage 6 : Verify Deployment ====="
+
+                sh '''
+                    kubectl rollout status deployment/myapp-deployment
+
+                    echo "================ Pods ================"
+                    kubectl get pods
+
+                    echo "============= Deployment ============="
+                    kubectl get deployment
+
+                    echo "============== Services =============="
+                    kubectl get svc
+                '''
+            }
+        }
+
+    }
+
+    post {
+
+        success {
+
+            echo "========================================="
+            echo "CI/CD Pipeline Executed Successfully"
+            echo "========================================="
+        }
+
+        failure {
+
+            echo "========================================="
+            echo "Pipeline Failed"
+            echo "Check Console Output"
+            echo "========================================="
+        }
+
+        always {
+
+            sh 'docker logout || true'
+        }
+    }
+}
