@@ -4,39 +4,51 @@ pipeline {
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Checkout Source Code') {
             steps {
-                echo 'Stage 1 : Clone Repository'
-                git branch: 'main',
-                    url: 'https://github.com/anjalithakur9414/containerized-webapp-cicd.git'
+                echo "Checking out source code from GitHub..."
+                checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo 'Stage 2 : Build Docker Image'
+                echo "Building Docker Image..."
 
                 sh '''
-                    docker build -t myapp:v1 -f docker/Dockerfile .
+                docker build -t myapp:v1 -f docker/Dockerfile .
                 '''
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                echo 'Stage 3 : Run Docker Container'
+                echo "Running Docker Container..."
 
                 sh '''
-                    docker rm -f myapp || true
+                docker rm -f myapp || true
 
-                    docker run -d \
-                    --name myapp \
-                    -p 8081:80 \
-                    myapp:v1
+                docker run -d \
+                --name myapp \
+                -p 8081:80 \
+                myapp:v1
                 '''
             }
         }
-
     }
 
+    post {
+
+        success {
+            echo "CI Pipeline executed successfully."
+        }
+
+        failure {
+            echo "CI Pipeline failed."
+        }
+
+        always {
+            echo "Pipeline execution completed."
+        }
+    }
 }
