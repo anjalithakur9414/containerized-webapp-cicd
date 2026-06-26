@@ -1,0 +1,20 @@
+# Docker
+*.tar
+
+# VS Code
+.vscode/
+
+# Vim
+*.swp
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Windows
+Thumbs.db
+
+# macOS
+.DS_Store
