@@ -20,6 +20,6 @@ spec:
    spec:
      containers:
       - name: myapp-container
-        image: anjali1410/myapp:v999
+        image: anjali1410/myapp:v1
         ports:
          - containerPort: 80
